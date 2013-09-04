@@ -46,8 +46,11 @@ var AlchemyDrop = (function() {
 		else if(r < 0.91) {
 			return { type: this.BLOCK_TYPES.MAGIC };
 		}
-		else if(r < 0.98) {
+		else if(r < 0.96) {
 			return { type: this.BLOCK_TYPES.LEAD };
+		}
+		else if(r < 0.98) {
+			return { type: this.BLOCK_TYPES.GOLD };
 		}
 		else {
 			return { type: this.BLOCK_TYPES.PHILOSOPHER_STONE };
@@ -82,18 +85,19 @@ var AlchemyDrop = (function() {
 					left: (c * tileWidth) + 'px'
 				});
 				console.log(state.board[c][r]);
+				div.css('backgroundImage', 'url("./image/tiles.png")');
 				switch(state.board[c][r].type) {
-					case 'F': div.css('backgroundColor', 'red'); break;
-					case 'W': div.css('backgroundColor', 'blue'); break;
-					case 'A': div.css('backgroundColor', 'white'); break;
-					case 'E': div.css('backgroundColor', 'brown'); break;
-					case 'L': div.css('backgroundColor', 'yellow'); break;
-					case 'N': div.css('backgroundColor', 'green'); break;
-					case 'M': div.css('backgroundColor', 'purple'); break;
-					case 'X': div.css('backgroundColor', 'grey'); break;
-					case 'G': div.css('backgroundColor', 'orange'); break;
-					case 'P': div.css('backgroundColor', 'black'); break;
-					default: div.css('backgroundColor', 'cyan'); break;
+					case 'F':div.css('backgroundPosition', '-0px -0px'); break;
+					case 'W': div.css('backgroundPosition', '-50px -0px'); break;
+					case 'A': div.css('backgroundPosition', '-0px -100px'); break;
+					case 'E': div.css('backgroundPosition', '-0px -50px'); break;
+					case 'L': div.css('backgroundPosition', '-100px -50px'); break;
+					case 'N': div.css('backgroundPosition', '-100px -0px'); break;
+					case 'M': div.css('backgroundPosition', '-50px -50px'); break;
+					case 'X': div.css('backgroundPosition', '-50px -100px'); break;
+					case 'G': div.css('backgroundPosition', '-100px -100px'); break;
+					case 'P': div.css('backgroundPosition', '-0px -150px'); break;
+					default: div.css('backgroundPosition', '-50px -150px'); break;
 				}
 				div.appendTo(this._parent);
 			}
