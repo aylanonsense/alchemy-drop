@@ -177,9 +177,45 @@ var AlchemyDrop = (function() {
 		}
 	};
 
+	function AlchemyDropCanvasRenderer() {
+		this._parent = null;
+		this._canvas = null;
+	}
+	AlchemyDropCanvasRenderer.prototype.renderTo = function(parent) {
+		this._parent = parent;
+		this._canvas = $('<canvas width="500px" height="500px"></canvas>').appendTo(this._parent);
+		this._ctx = this._canvas[0].getContext('2d');
+	};
+	AlchemyDropCanvasRenderer.prototype.render = function(state) {
+		var r, c, tileWidth = 50, tileHeight = 50;
+
+		//clear the canvas
+		this._ctx.fillStyle = '#000';
+		this._ctx.fillRect(0, 0, 500, 500);
+
+		for(c = 0; c < state.board.length; c++) {
+			for(r = 0; r < state.board.length; r++) {
+				switch(state.board[c][r].type) {
+					case 'F': this._ctx.fillStyle = '#ff3300'; break;
+					case 'W': this._ctx.fillStyle = '#00ff00'; break;
+					case 'A': this._ctx.fillStyle = '#ffffff'; break;
+					case 'E': this._ctx.fillStyle = '#555500'; break;
+					case 'L': this._ctx.fillStyle = '#ffff00'; break;
+					case 'N': this._ctx.fillStyle = '#00ff00'; break;
+					case 'M': this._ctx.fillStyle = '#ff00ff'; break;
+					case 'X': this._ctx.fillStyle = '#333333'; break;
+					case 'G': this._ctx.fillStyle = '#998800'; break;
+					case 'P': this._ctx.fillStyle = '#ff3333'; break;
+					default: this._ctx.fillStyle = '#00ffff'; break;
+				}
+				this._ctx.fillRect(c * tileWidth, r * tileHeight, tileWidth, tileHeight);
+			}
+		}
+	};
+
 	function AlchemyDropManager(parent) {
 		this._game = new AlchemyDrop();
-		this._renderer = new AlchemyDropHTMLRenderer();
+		this._renderer = new AlchemyDropCanvasRenderer();
 		this._game.createBoard(4, 4);
 		this._renderer.renderTo(parent);
 		this._renderer.render(this._game.getState());
