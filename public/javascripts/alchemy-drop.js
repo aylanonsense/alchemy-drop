@@ -182,6 +182,7 @@ var AlchemyDrop = (function() {
 		this._canvas = null;
 		this._sprites = {};
 		this._rawImages = {};
+		this._selectedTiles = [];
 	}
 	AlchemyDropCanvasRenderer.prototype.loadResources = function(callback) {
 		var self = this;
@@ -209,6 +210,39 @@ var AlchemyDrop = (function() {
 		this._parent = parent;
 		this._canvas = $('<canvas width="500px" height="500px"></canvas>').appendTo(this._parent);
 		this._ctx = this._canvas[0].getContext('2d');
+		this._addEventListeners();
+	};
+	AlchemyDropCanvasRenderer.prototype._addEventListeners = function() {
+		var self = this;
+		this._canvas.on('mousedown', function(evt) {
+			var startingPos = { x: evt.offsetX, y: evt.offsetY };
+			self._selectTileAt(startingPos.x, startingPos.y);
+			function onMove(evt) {
+				var currPos = { x : evt.offsetX, y: evt.offsetY };
+				self._selectTileAt(currPos.x, currPos.y);
+			}
+			function onUp(evt) {
+				var endingPos = { x: evt.offsetX, y: evt.offsetY };
+				self._selectTileAt(endingPos.x, endingPos.y);
+				self._canvas.off('mousemove', onMove);
+				self._canvas.off('mouseup', onUp);
+			}
+			self._canvas.on('mousemove', onMove);
+			self._canvas.on('mouseup', onUp);
+		});
+	};
+	AlchemyDropCanvasRenderer.prototype._selectTileAt = function(x, y) {
+		var row = Math.floor(y / 50);
+		var col = Math.floor(x / 50);
+		for(var t = 0; t < this._selectedTiles.length; t++) {
+			if(this._selectedTiles.row === row && this._selectedTiles.col === col) {
+				return;
+			}
+		}
+		this._selectedTiles.push({
+			row: row,
+			col: col
+		});
 	};
 	AlchemyDropCanvasRenderer.prototype.render = function(state) {
 		var r, c, tileWidth = 50, tileHeight = 50;
@@ -235,6 +269,12 @@ var AlchemyDrop = (function() {
 				}
 				if(this._sprites.tiles) {
 					this._sprites.tiles.drawFrame(this._ctx, frame, c * 50, r * 50);
+				}
+				for(var t = 0; t < this._selectedTiles.length; t++) {
+					if(this._selectedTiles[t].row === r && this._selectedTiles[t].col === c) {
+						this._ctx.fillStyle = '#f00';
+						this._ctx.fillRect(10 + 50 * c, 10 + 50 * r, 30, 30);
+					}
 				}
 			}
 		}
@@ -264,7 +304,7 @@ var AlchemyDrop = (function() {
 	function AlchemyDropManager(parent) {
 		this._game = new AlchemyDrop();
 		this._renderer = new AlchemyDropCanvasRenderer();
-		this._game.createBoard(4, 4);
+		this._game.createBoard(10, 10);
 		this._renderer.loadResources(function() {});
 		this._renderer.renderTo(parent);
 		this._renderer.render(this._game.getState());
@@ -282,8 +322,8 @@ $(document).ready(function() {
 	var alchemyDrop = new AlchemyDrop($("#game"));
 	setInterval(function() {
 		alchemyDrop.swap([{
-			row: Math.floor(1 + 2 * Math.random()),
-			col: Math.floor(1 + 2 * Math.random())
+			row: Math.floor(1 + 8 * Math.random()),
+			col: Math.floor(1 + 8 * Math.random())
 		}], Math.floor(3 * Math.random() -1 ), Math.floor(3 * Math.random() -1 ));
 	}, 1000);
 });
