@@ -3,7 +3,7 @@ var AlchemyDrop = (function() {
 		this._board = null;
 		this._swaps = [];
 	}
-	AlchemyDrop.prototype.BLOCK_TYPES = {
+	AlchemyDrop.prototype.TILE_TYPES = {
 		FIRE: 'F',
 		WATER: 'W',
 		AIR: 'A',
@@ -27,34 +27,34 @@ var AlchemyDrop = (function() {
 	AlchemyDrop.prototype._generateRandomTile = function() {
 		var r = Math.random();
 		if(r < 0.13) {
-			return { type: this.BLOCK_TYPES.FIRE };
+			return { type: this.TILE_TYPES.FIRE };
 		}
 		else if(r < 0.26) {
-			return { type: this.BLOCK_TYPES.WATER };
+			return { type: this.TILE_TYPES.WATER };
 		}
 		else if(r < 0.39) {
-			return { type: this.BLOCK_TYPES.AIR };
+			return { type: this.TILE_TYPES.AIR };
 		}
 		else if(r < 0.52) {
-			return { type: this.BLOCK_TYPES.EARTH };
+			return { type: this.TILE_TYPES.EARTH };
 		}
 		else if(r < 0.65) {
-			return { type: this.BLOCK_TYPES.LIGHTNING };
+			return { type: this.TILE_TYPES.LIGHTNING };
 		}
 		else if(r < 0.78) {
-			return { type: this.BLOCK_TYPES.NATURE };
+			return { type: this.TILE_TYPES.NATURE };
 		}
 		else if(r < 0.91) {
-			return { type: this.BLOCK_TYPES.MAGIC };
+			return { type: this.TILE_TYPES.MAGIC };
 		}
 		else if(r < 0.96) {
-			return { type: this.BLOCK_TYPES.LEAD };
+			return { type: this.TILE_TYPES.LEAD };
 		}
 		else if(r < 0.98) {
-			return { type: this.BLOCK_TYPES.GOLD };
+			return { type: this.TILE_TYPES.GOLD };
 		}
 		else {
-			return { type: this.BLOCK_TYPES.PHILOSOPHER_STONE };
+			return { type: this.TILE_TYPES.PHILOSOPHER_STONE };
 		}
 	};
 	AlchemyDrop.prototype.getState = function() {
@@ -62,17 +62,75 @@ var AlchemyDrop = (function() {
 			board: this._board
 		};
 	};
-	AlchemyDrop.prototype.next = function() {
-		var swap, t, tile;
-		if(this._swaps.length > 0) {
-			swap = this._swaps[0];
-			this._swaps.splice(0, 1); //remove the first
-			for(t = 0; t < swap.tiles.length; t++) {
+	AlchemyDrop.prototype._validateSwap = function(swap) {
+		var t, tile;
+		var swapIsTrivial = ((swap.xMove === 0 && swap.yMove === 0) || swap.tiles.length === 0);
+		var isMovingTilesOffBoard = false;
+		var illegalTilesBeingSwapped = [];
+
+		for(t = 0; t < swap.tiles.length; t++) {
+			//FROM TILES
+			//the move is illegal if it moves tiles off the board
+			if(swap.tiles[t].col < 0 || swap.tiles[t].col > this._board.length || swap.tiles[t].row < 0 || swap.tiles[t].row > this._board[0].length) {
+				isMovingTilesOffBoard = true;
+			}
+			else {
+				//the move is illegal if it contains lead or gold
 				tile = this._board[swap.tiles[t].col][swap.tiles[t].row];
-				this._board[swap.tiles[t].col][swap.tiles[t].row] = this._board[swap.tiles[t].col + swap.xMove][swap.tiles[t].row + swap.yMove];
-				this._board[swap.tiles[t].col + swap.xMove][swap.tiles[t].row + swap.yMove] = tile;
+				if(tile.type === this.TILE_TYPES.LEAD || tile.type === this.TILE_TYPES.GOLD) {
+					illegalTilesBeingSwapped.push({ tile: tile, row: swap.tiles[t].row, col: swap.tiles[t].col });
+				}
+			}
+
+			//TO TILES
+			//the move is illegal if it moves tiles off the board
+			if(swap.tiles[t].col + swap.xMove < 0 || swap.tiles[t].col + swap.xMove > this._board.length || swap.tiles[t].row + swap.yMove < 0 || swap.tiles[t].row + swap.yMove > this._board[0].length) {
+				isMovingTilesOffBoard = true;
+			}
+			else {
+				//the move is illegal if it contains lead or gold
+				tile = this._board[swap.tiles[t].col + swap.xMove][swap.tiles[t].row + swap.yMove];
+				if(tile.type === this.TILE_TYPES.LEAD || tile.type === this.TILE_TYPES.GOLD) {
+					illegalTilesBeingSwapped.push({ tile: tile, row: swap.tiles[t].row + swap.yMove, col: swap.tiles[t].col + swap.xMove });
+				}
 			}
 		}
+
+		return {
+			isValid: !swapIsTrivial && !isMovingTilesOffBoard && illegalTilesBeingSwapped.length === 0,
+			swapIsTrivial: swapIsTrivial,
+			isMovingTilesOffBoard: isMovingTilesOffBoard,
+			illegalTilesBeingSwapped: illegalTilesBeingSwapped
+		};
+	};
+	AlchemyDrop.prototype._handleSwap = function(swap) {
+		//if the move is illegal, return the validation object
+		var validation = this._validateSwap(swap);
+		if(!validation.isValid) {
+			return { action: 'swap-prohibited', reason: validation };
+		}
+
+		//swap the tiles
+		for(t = 0; t < swap.tiles.length; t++) {
+			tile = this._board[swap.tiles[t].col][swap.tiles[t].row];
+			this._board[swap.tiles[t].col][swap.tiles[t].row] = this._board[swap.tiles[t].col + swap.xMove][swap.tiles[t].row + swap.yMove];
+			this._board[swap.tiles[t].col + swap.xMove][swap.tiles[t].row + swap.yMove] = tile;
+		}
+		return {
+			action: 'swap',
+			tiles: swap.tiles,
+			xMove: swap.xMove,
+			yMove: swap.yMove
+		};
+	};
+	AlchemyDrop.prototype.next = function() {
+		if(this._swaps.length > 0) {
+			var t, tile;
+			var swap = this._swaps[0];
+			this._swaps.splice(0, 1);
+			return this._handleSwap(swap);
+		}
+		return { action: 'yield' };
 	};
 	AlchemyDrop.prototype.swap = function(tiles, xMove, yMove) {
 		this._swaps.push({
