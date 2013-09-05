@@ -125,10 +125,7 @@ var AlchemyDrop = (function() {
 	};
 	AlchemyDrop.prototype.next = function() {
 		if(this._swaps.length > 0) {
-			var t, tile;
-			var swap = this._swaps[0];
-			this._swaps.splice(0, 1);
-			return this._handleSwap(swap);
+			return this._handleSwap(this._swaps.splice(0, 1)[0]);
 		}
 		return { action: 'yield' };
 	};
