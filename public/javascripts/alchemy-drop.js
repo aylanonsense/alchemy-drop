@@ -1,6 +1,7 @@
 var AlchemyDrop = (function() {
 	function AlchemyDrop() {
 		this._board = null;
+		this._swaps = [];
 	}
 	AlchemyDrop.prototype.BLOCK_TYPES = {
 		FIRE: 'F',
@@ -61,6 +62,25 @@ var AlchemyDrop = (function() {
 			board: this._board
 		};
 	};
+	AlchemyDrop.prototype.next = function() {
+		var swap, t, tile;
+		if(this._swaps.length > 0) {
+			swap = this._swaps[0];
+			this._swaps.splice(0, 1); //remove the first
+			for(t = 0; t < swap.tiles.length; t++) {
+				tile = this._board[swap.tiles[t].col][swap.tiles[t].row];
+				this._board[swap.tiles[t].col][swap.tiles[t].row] = this._board[swap.tiles[t].col + swap.xMove][swap.tiles[t].row + swap.yMove];
+				this._board[swap.tiles[t].col + swap.xMove][swap.tiles[t].row + swap.yMove] = tile;
+			}
+		}
+	};
+	AlchemyDrop.prototype.swap = function(tiles, xMove, yMove) {
+		this._swaps.push({
+			tiles: tiles,
+			xMove: xMove,
+			yMove: yMove
+		});
+	};
 
 	function AlchemyDropHTMLRenderer() {
 		this._parent = null;
@@ -70,8 +90,8 @@ var AlchemyDrop = (function() {
 	};
 	AlchemyDropHTMLRenderer.prototype.render = function(state) {
 		var r, c, div, tileWidth, tileHeight;
-		tileWidth = 500 / state.board.length;
-		tileHeight = 500 / state.board[0].length;
+		tileWidth = 50;
+		tileHeight = 50;
 		this._parent.empty();
 		for(c = 0; c < state.board.length; c++) {
 			for(r = 0; r < state.board.length; r++) {
@@ -79,12 +99,10 @@ var AlchemyDrop = (function() {
 				div.css({
 					width: tileWidth + 'px',
 					height: tileHeight + 'px',
-					backgroundColor: 'red',
 					position: 'absolute',
 					top: (r * tileHeight) + 'px',
 					left: (c * tileWidth) + 'px'
 				});
-				console.log(state.board[c][r]);
 				div.css('backgroundImage', 'url("./image/tiles.png")');
 				switch(state.board[c][r].type) {
 					case 'F':div.css('backgroundPosition', '-0px -0px'); break;
@@ -107,14 +125,25 @@ var AlchemyDrop = (function() {
 	function AlchemyDropManager(parent) {
 		this._game = new AlchemyDrop();
 		this._renderer = new AlchemyDropHTMLRenderer();
-		this._game.createBoard(10, 10);
+		this._game.createBoard(4, 4);
 		this._renderer.renderTo(parent);
 		this._renderer.render(this._game.getState());
 	}
+	AlchemyDropManager.prototype.swap = function(tiles, xMove, yMove) {
+		this._game.swap(tiles, xMove, yMove);
+		this._game.next();
+		this._renderer.render(this._game.getState());
+	};
 
 	return AlchemyDropManager;
 })();
 
 $(document).ready(function() {
 	var alchemyDrop = new AlchemyDrop($("#game"));
+	setInterval(function() {
+		alchemyDrop.swap([{
+			row: Math.floor(1 + 2 * Math.random()),
+			col: Math.floor(1 + 2 * Math.random())
+		}], Math.floor(3 * Math.random() -1 ), Math.floor(3 * Math.random() -1 ));
+	}, 1000);
 });
