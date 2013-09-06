@@ -214,6 +214,7 @@ var AlchemyDrop = (function() {
 		if(this._needsToCheckForCombos) {
 			var comboObj = this._checkForCombos();
 			if(comboObj.combos.length > 0) {
+				this._needsToCheckForCombos = false; //TODO combo --> combo effects --> check for combos
 				return comboObj;
 			}
 			else {
@@ -403,7 +404,7 @@ var AlchemyDrop = (function() {
 		var self = this;
 		this._game = new AlchemyDrop();
 		this._renderer = new AlchemyDropCanvasRenderer(this._game);
-		this._game.createBoard(4, 4);
+		this._game.createBoard(10, 10);
 		this._renderer.loadResources(function() {
 			self._renderer.render();
 		});
@@ -422,8 +423,8 @@ $(document).ready(function() {
 	var alchemyDrop = new AlchemyDrop($("#game"));
 	setInterval(function() {
 		alchemyDrop.swap([{
-			row: Math.floor(4 * Math.random()),
-			col: Math.floor(3 * Math.random())
+			row: Math.floor(10 * Math.random()),
+			col: Math.floor(9 * Math.random())
 		}], 1, 0);
-	}, 100);
+	}, 50);
 });
