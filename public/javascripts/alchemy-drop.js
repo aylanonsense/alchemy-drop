@@ -2,6 +2,32 @@ var AlchemyDrop = (function() {
 	function AlchemyDrop() {
 		this._board = null;
 		this._swaps = [];
+		this._needsToCheckForCombos = false;
+		this._combos = [
+			{	name: 'fireball',
+				diagram: [	' F ',
+							'F F',
+							' F ' ] },
+			{	name: 'quake',
+				diagram: [	'EE EE' ] },
+			{	name: 'bolt',
+				diagram: [	'L',
+							'L',
+							'L',
+							'L' ] },
+			{	name: 'whirlwind',
+				diagram: [	'A A',
+							'   ',
+							'A A' ] },
+			{	name: 'sprout',
+				diagram: [	'N N',
+							' N ',
+							' N ' ] },
+			{	name: 'rain',
+				diagram: [	'W  W',
+							' WW ' ] }
+		];
+		this._parseCombos();
 	}
 	AlchemyDrop.prototype.TILE_TYPES = {
 		FIRE: 'F',
@@ -14,6 +40,42 @@ var AlchemyDrop = (function() {
 		LEAD: 'X',
 		GOLD: 'G',
 		PHILOSOPHER_STONE: 'P'
+	};
+	AlchemyDrop.prototype._parseCombos = function() {
+		for(var c = 0; c < this._combos.length; c++) {
+			this._combos[c].isCombo = this._parseComboDiagram(this._combos[c].diagram);
+		}
+	};
+	AlchemyDrop.prototype._parseComboDiagram = function(diagram) {
+		var self = this;
+		function is(type, offsetX, offsetY) {
+			return function(r, c) {
+				if(self._board.length <= c + offsetX) {
+					return false;
+				}
+				if(self._board[0].length <= r + offsetY) {
+					return false;
+				}
+				if(type === ' ') {
+					return true;
+				}
+				return self._board[c + offsetX][r + offsetY].type === type;
+			};
+		}
+		var steps = [];
+		for(var r = 0; r < diagram.length; r++) {
+			for(var c = 0; c < diagram[r].length; c++) {
+				steps.push(is(diagram[r][c], c, r));
+			}
+		}
+		return function(r, c) {
+			for(var s = 0; s < steps.length; s++) {
+				if(!steps[s](r, c)) {
+					return false;
+				}
+			}
+			return true;
+		};
 	};
 	AlchemyDrop.prototype.createBoard = function(columns, rows) {
 		this._board = [];
@@ -103,7 +165,7 @@ var AlchemyDrop = (function() {
 			illegalTilesBeingSwapped: illegalTilesBeingSwapped
 		};
 	};
-	AlchemyDrop.prototype._handleSwap = function(swap) {
+	AlchemyDrop.prototype._swap = function(swap) {
 		//if the move is illegal, return the validation object
 		var validation = this._validateSwap(swap);
 		if(!validation.isValid) {
@@ -116,6 +178,11 @@ var AlchemyDrop = (function() {
 			this._board[swap.tiles[t].col][swap.tiles[t].row] = this._board[swap.tiles[t].col + swap.xMove][swap.tiles[t].row + swap.yMove];
 			this._board[swap.tiles[t].col + swap.xMove][swap.tiles[t].row + swap.yMove] = tile;
 		}
+
+		//the game will need to check for combos next
+		this._needsToCheckForCombos = true;
+
+		//return swap action
 		return {
 			action: 'swap',
 			tiles: swap.tiles,
@@ -123,13 +190,41 @@ var AlchemyDrop = (function() {
 			yMove: swap.yMove
 		};
 	};
+	AlchemyDrop.prototype._checkForCombos = function() {
+		var combos = [];
+		for(var i = 0; i< this._combos.length; i++) {
+			for(var c = 0; c < this._board.length; c++) {
+				for(var r = 0; r < this._board[0].length; r++) {
+					if(this._combos[i].isCombo(r, c)) {
+						combos.push({
+							name: this._combos[i].name,
+							row: r,
+							col: c
+						});
+					}
+				}
+			}
+		}
+		return {
+			combos: combos
+		};
+	};
 	AlchemyDrop.prototype.next = function() {
+		if(this._needsToCheckForCombos) {
+			var comboObj = this._checkForCombos();
+			if(comboObj.combos.length > 0) {
+				return comboObj;
+			}
+			else {
+				this._needsToCheckForCombos = false;
+			}
+		}
 		if(this._swaps.length > 0) {
-			return this._handleSwap(this._swaps.splice(0, 1)[0]);
+			return this._swap(this._swaps.splice(0, 1)[0]);
 		}
 		return { action: 'yield' };
 	};
-	AlchemyDrop.prototype.swap = function(tiles, xMove, yMove) {
+	AlchemyDrop.prototype.queueSwap = function(tiles, xMove, yMove) {
 		this._swaps.push({
 			tiles: tiles,
 			xMove: xMove,
@@ -302,17 +397,22 @@ var AlchemyDrop = (function() {
 	};
 
 	function AlchemyDropManager(parent) {
+		var self = this;
 		this._game = new AlchemyDrop();
 		this._renderer = new AlchemyDropCanvasRenderer();
 		this._game.createBoard(10, 10);
 		this._renderer.loadResources(function() {});
 		this._renderer.renderTo(parent);
 		this._renderer.render(this._game.getState());
+		setInterval(function() {
+			self._game.next();
+			self._renderer.render(self._game.getState());
+		}, 1000);
 	}
 	AlchemyDropManager.prototype.swap = function(tiles, xMove, yMove) {
-		this._game.swap(tiles, xMove, yMove);
+		/*this._game.queueSwap(tiles, xMove, yMove);
 		this._game.next();
-		this._renderer.render(this._game.getState());
+		this._renderer.render(this._game.getState());*/
 	};
 
 	return AlchemyDropManager;
@@ -320,10 +420,10 @@ var AlchemyDrop = (function() {
 
 $(document).ready(function() {
 	var alchemyDrop = new AlchemyDrop($("#game"));
-	setInterval(function() {
+	/*setInterval(function() {
 		alchemyDrop.swap([{
 			row: Math.floor(1 + 8 * Math.random()),
 			col: Math.floor(1 + 8 * Math.random())
 		}], Math.floor(3 * Math.random() -1 ), Math.floor(3 * Math.random() -1 ));
-	}, 1000);
+	}, 1000);*/
 });
