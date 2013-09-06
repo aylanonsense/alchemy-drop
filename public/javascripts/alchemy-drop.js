@@ -143,6 +143,7 @@ var AlchemyDrop = (function() {
 					illegalTilesBeingSwapped.push({ tile: tile, row: swap.tiles[t].row, col: swap.tiles[t].col });
 				}
 			}
+			//TODO the move is illegal if any tiles are non-adjacent
 
 			//TO TILES
 			//the move is illegal if it moves tiles off the board
@@ -272,7 +273,8 @@ var AlchemyDrop = (function() {
 		}
 	};
 
-	function AlchemyDropCanvasRenderer() {
+	function AlchemyDropCanvasRenderer(game) {
+		this._game = game;
 		this._parent = null;
 		this._canvas = null;
 		this._sprites = {};
@@ -339,8 +341,9 @@ var AlchemyDrop = (function() {
 			col: col
 		});
 	};
-	AlchemyDropCanvasRenderer.prototype.render = function(state) {
+	AlchemyDropCanvasRenderer.prototype.render = function() {
 		var r, c, tileWidth = 50, tileHeight = 50;
+		var state = this._game.getState();
 
 		//clear the canvas
 		this._ctx.fillStyle = '#000';
@@ -399,20 +402,17 @@ var AlchemyDrop = (function() {
 	function AlchemyDropManager(parent) {
 		var self = this;
 		this._game = new AlchemyDrop();
-		this._renderer = new AlchemyDropCanvasRenderer();
-		this._game.createBoard(10, 10);
-		this._renderer.loadResources(function() {});
+		this._renderer = new AlchemyDropCanvasRenderer(this._game);
+		this._game.createBoard(4, 4);
+		this._renderer.loadResources(function() {
+			self._renderer.render();
+		});
 		this._renderer.renderTo(parent);
-		this._renderer.render(this._game.getState());
-		setInterval(function() {
-			self._game.next();
-			self._renderer.render(self._game.getState());
-		}, 1000);
 	}
 	AlchemyDropManager.prototype.swap = function(tiles, xMove, yMove) {
-		/*this._game.queueSwap(tiles, xMove, yMove);
-		this._game.next();
-		this._renderer.render(this._game.getState());*/
+		this._game.queueSwap(tiles, xMove, yMove);
+		while(this._game.next().action !== 'yield') {}
+		this._renderer.render();
 	};
 
 	return AlchemyDropManager;
@@ -420,10 +420,10 @@ var AlchemyDrop = (function() {
 
 $(document).ready(function() {
 	var alchemyDrop = new AlchemyDrop($("#game"));
-	/*setInterval(function() {
+	setInterval(function() {
 		alchemyDrop.swap([{
-			row: Math.floor(1 + 8 * Math.random()),
-			col: Math.floor(1 + 8 * Math.random())
-		}], Math.floor(3 * Math.random() -1 ), Math.floor(3 * Math.random() -1 ));
-	}, 1000);*/
+			row: Math.floor(4 * Math.random()),
+			col: Math.floor(3 * Math.random())
+		}], 1, 0);
+	}, 100);
 });
